@@ -37,7 +37,7 @@ async function main() {
   const prompt = createPrompt(prDiff);
 
   const command = new InvokeModelCommand({
-    modelId: process.env.AWS_MODEL_ID || "anthropic.claude-3-sonnet-20240229-v1:0",
+    modelId: process.env.AWS_MODEL_ID || "anthropic.claude-3-5-sonnet-20240620-v1:0",
     contentType: "application/json",
     accept: "application/json",
     body: JSON.stringify({
