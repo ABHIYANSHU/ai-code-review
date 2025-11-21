@@ -84,13 +84,15 @@ async function main() {
   // ---------------------------------------------------------
   // Step 4: Submit Review to GitHub
   // ---------------------------------------------------------
+  const finalBody = `### ${reviewDecision.verdict}\n\n${reviewDecision.comments}`;
+
   await octokit.rest.pulls.createReview({
     ...context,
-    body: reviewDecision.comments,
-    event: reviewDecision.status, // "APPROVE" or "REQUEST_CHANGES"
+    body: finalBody,
+    event: "COMMENT", // <--- CHANGE THIS (Forces a neutral comment)
   });
 
-  console.log(`🎉 Review Submitted Successfully!`);
+  console.log(`🎉 Review Commented: ${reviewDecision.verdict}`);
 }
 
 // Global Error Handler

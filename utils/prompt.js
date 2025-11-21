@@ -9,12 +9,15 @@ INSTRUCTIONS:
 
 CRITICAL OUTPUT RULES:
 - Output valid JSON only.
-- Do not use Markdown code blocks (no \`\`\`).
 - **Minify your JSON response (keep it on a single line).**
-- Escape all newlines inside strings (use \\n, not actual line breaks).
+- Escape all newlines inside strings.
 
 OUTPUT FORMAT:
-{"status":"APPROVE"|"REQUEST_CHANGES","comments":"Markdown formatted review summary..."}
+{
+  "status": "APPROVE" | "REQUEST_CHANGES",
+  "verdict": "Short headline summary (e.g., '❌ Critical Flaws Found' or '✅ Code looks good')",
+  "comments": "Markdown formatted review summary..."
+}
 
 GIT DIFF:
 ${diff}
