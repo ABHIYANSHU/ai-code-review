@@ -7,10 +7,16 @@ INSTRUCTIONS:
 2. Identify code style improvements.
 3. You MUST output a strictly valid JSON object.
 
+CRITICAL OUTPUT RULES:
+- Output valid JSON only.
+- **Minify your JSON response (keep it on a single line).**
+- Escape all newlines inside strings.
+
 OUTPUT FORMAT:
 {
   "status": "APPROVE" | "REQUEST_CHANGES",
-  "comments": "Markdown formatted review summary here..."
+  "verdict": "Short headline summary (e.g., '❌ Critical Flaws Found' or '✅ Code looks good')",
+  "comments": "Markdown formatted review summary..."
 }
 
 GIT DIFF:
