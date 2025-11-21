@@ -2,10 +2,11 @@ import { BedrockRuntimeClient, InvokeModelCommand } from "@aws-sdk/client-bedroc
 import { Octokit } from "octokit";
 import { createPrompt } from "../utils/prompt.js";
 
-// 1. Setup Clients
+// 1. Initialize Clients
 const bedrock = new BedrockRuntimeClient({ region: process.env.AWS_REGION });
 const octokit = new Octokit({ auth: process.env.GITHUB_TOKEN });
 
+// Context from GitHub Actions
 const context = {
   owner: process.env.REPO_OWNER,
   repo: process.env.REPO_NAME,
@@ -13,20 +14,30 @@ const context = {
 };
 
 async function main() {
-  console.log(`Starting Review for PR #${context.pull_number}...`);
+  console.log(`🚀 Starting AI Review for PR #${context.pull_number}...`);
 
-  // 2. Fetch the PR Diff
+  // ---------------------------------------------------------
+  // Step 1: Fetch the Code Diff
+  // ---------------------------------------------------------
   const { data: prDiff } = await octokit.rest.pulls.get({
     ...context,
     mediaType: { format: "diff" },
   });
 
-  // 3. Call AWS Bedrock
-  console.log("Analyzing with Claude...");
-  const prompt = createPrompt(prDiff);
+  if (!prDiff) {
+    console.log("No diff found. Exiting.");
+    return;
+  }
   
+  console.log("✅ Diff fetched. Sending to Claude...");
+
+  // ---------------------------------------------------------
+  // Step 2: Call AWS Bedrock (Claude 3)
+  // ---------------------------------------------------------
+  const prompt = createPrompt(prDiff);
+
   const command = new InvokeModelCommand({
-    modelId: process.env.AWS_MODEL_ID || "anthropic.claude-3-5-sonnet-20240620-v1:0",
+    modelId: process.env.AWS_MODEL_ID || "anthropic.claude-3-sonnet-20240229-v1:0",
     contentType: "application/json",
     accept: "application/json",
     body: JSON.stringify({
@@ -37,27 +48,53 @@ async function main() {
   });
 
   const response = await bedrock.send(command);
+  
+  // Decode the response
   const responseBody = JSON.parse(new TextDecoder().decode(response.body));
   const aiResultText = responseBody.content[0].text;
 
-  // 4. Parse AI JSON (Simple cleanup to ensure valid JSON)
-  // Sometimes LLMs add text like "Here is the JSON:" before the bracket
-  const jsonMatch = aiResultText.match(/\{[\s\S]*\}/);
-  if (!jsonMatch) throw new Error("AI did not return JSON");
+  // ---------------------------------------------------------
+  // Step 3: Parse JSON Safely
+  // ---------------------------------------------------------
+  let reviewDecision;
   
-  const reviewDecision = JSON.parse(jsonMatch[0]);
+  try {
+    // CLEANUP: Remove Markdown code blocks if the AI added them (e.g. ```json ... ```)
+    const cleanText = aiResultText.replace(/```json\s*|\s*```/g, "");
 
-  // 5. Post Review to GitHub
+    // FIND JSON: Look for the first '{' and last '}' to isolate the object
+    const jsonMatch = cleanText.match(/\{[\s\S]*\}/);
+    
+    if (!jsonMatch) {
+      console.error("Raw AI Output:", aiResultText);
+      throw new Error("Could not find JSON in AI response");
+    }
+
+    // PARSE: Convert string to Object
+    reviewDecision = JSON.parse(jsonMatch[0]);
+    
+    console.log(`✅ Parsed Decision: ${reviewDecision.status}`);
+
+  } catch (error) {
+    console.error("❌ JSON Parse Error:", error.message);
+    console.error("Raw AI Output:", aiResultText);
+    process.exit(1); // Fail the Action so you see the Red X
+  }
+
+  // ---------------------------------------------------------
+  // Step 4: Submit Review to GitHub
+  // ---------------------------------------------------------
   await octokit.rest.pulls.createReview({
     ...context,
     body: reviewDecision.comments,
-    event: reviewDecision.status, // APPROVE or REQUEST_CHANGES
+    event: reviewDecision.status, // "APPROVE" or "REQUEST_CHANGES"
   });
 
-  console.log(`Review Submitted: ${reviewDecision.status}`);
+  console.log(`🎉 Review Submitted Successfully!`);
 }
 
+// Global Error Handler
 main().catch((error) => {
-  console.error("Error:", error);
+  console.error("❌ Script Failed:", error);
   process.exit(1);
 });

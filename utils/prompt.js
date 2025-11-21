@@ -7,11 +7,14 @@ INSTRUCTIONS:
 2. Identify code style improvements.
 3. You MUST output a strictly valid JSON object.
 
+CRITICAL OUTPUT RULES:
+- Output valid JSON only.
+- Do not use Markdown code blocks (no \`\`\`).
+- **Minify your JSON response (keep it on a single line).**
+- Escape all newlines inside strings (use \\n, not actual line breaks).
+
 OUTPUT FORMAT:
-{
-  "status": "APPROVE" | "REQUEST_CHANGES",
-  "comments": "Markdown formatted review summary here..."
-}
+{"status":"APPROVE"|"REQUEST_CHANGES","comments":"Markdown formatted review summary..."}
 
 GIT DIFF:
 ${diff}
